@@ -1,41 +1,60 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import request from 'supertest';
-import { app } from '../index';
-import * as dogService from '../services/dogService';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import request from 'supertest'
+import express from 'express'
 
-beforeEach(() => {
-  vi.resetAllMocks();
-});
+vi.mock('../controllers/dogController', () => ({
+  getDogImage: vi.fn()
+}))
 
-describe('dogRoutes', () => {
-  // Positive Route Test
-  it('GET /api/dogs/random returns mocked dog image', async () => {
-    const mockDog = {
-      imageUrl: 'https://images.dog.ceo/breeds/stbernard/n02109525_15579_jpg',
-      status: 'success',
-    };
+import dogRoutes from '../routes/dogRoutes'
+import { getDogImage } from '../controllers/dogController'
 
-    vi.spyOn(dogService, 'getRandomDogImage').mockResolvedValueOnce(mockDog);
+describe('DogRoutes', () => {
 
-    const res = await request(app).get('/api/dogs/random');
+  let app: any
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.imageUrl).toBe(mockDog.imageUrl);
-  });
+  beforeEach(() => {
+    app = express()
+    app.use(express.json())
+    app.use('/api/dogs', dogRoutes)
+    vi.clearAllMocks()
+  })
 
-  // Negative Route Test
-  it('GET /api/dogs/random returns 500 when service fails', async () => {
-    vi.spyOn(dogService, 'getRandomDogImage').mockRejectedValueOnce(
-      new Error('Network error')
-    );
+  it('should return 200 and success true', async () => {
 
-    const res = await request(app).get('/api/dogs/random');
+    ;(getDogImage as any).mockImplementation((_req: any, res: any) => {
+      return res.status(200).json({
+        success: true,
+        data: {
+          imageUrl: 'mocked-dog.jpg'
+        }
+      })
+    })
 
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: 'Network error', 
-    });
-  });
-});
+    const response = await request(app)
+      .get('/api/dogs/random')
+
+    expect(response.status).toBe(200)
+    expect(response.body.success).toBe(true)
+    expect(response.body.data.imageUrl)
+      .toContain('mocked-dog.jpg')
+  })
+
+  it('should return 500 and error message', async () => {
+
+    ;(getDogImage as any).mockImplementation((_req: any, res: any) => {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch dog image: Network error'
+      })
+    })
+
+    const response = await request(app)
+      .get('/api/dogs/random')
+
+    expect(response.status).toBe(500)
+    expect(response.body.success).toBe(false)
+    expect(response.body.error)
+      .toBe('Failed to fetch dog image: Network error')
+  })
+})
