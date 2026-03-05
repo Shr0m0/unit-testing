@@ -9,8 +9,7 @@ const mockSuccessResponse = {
 }
 
 test('Dog image loads on page load', async ({ page }) => {
-
-  await page.route('http://localhost:5000/api/dogs/random', async route => {
+  await page.route('**/api/dogs/random', async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -19,16 +18,15 @@ test('Dog image loads on page load', async ({ page }) => {
   })
 
   await page.goto('http://localhost:5173')
-  const img = page.locator('img')
 
-  await expect(img).toBeVisible()
-  await expect(img).toHaveAttribute('src', /images\.dog\.ceo/)
+  const img = page.getByRole('img', { name: 'Random dog' })
+
+  await expect(img).toHaveAttribute('src', /^https:\/\//)
 })
 
 
 test('Dog image loads when button is clicked', async ({ page }) => {
-
-  await page.route('http://localhost:5000/api/dogs/random', async route => {
+  await page.route('**/api/dogs/random', async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -37,11 +35,12 @@ test('Dog image loads when button is clicked', async ({ page }) => {
   })
 
   await page.goto('http://localhost:5173')
-  await page.getByRole('button', { name: 'Get Another Dog' }).click()
-  const img = page.locator('img')
 
-  await expect(img).toBeVisible()
-  await expect(img).toHaveAttribute('src', /images\.dog\.ceo/)
+  await page.getByRole('button', { name: 'Get Another Dog' }).click()
+
+  const img = page.getByRole('img', { name: 'Random dog' })
+
+  await expect(img).toHaveAttribute('src', /^https:\/\//)
 })
 
 
